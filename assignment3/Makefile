@@ -4,7 +4,7 @@ all: 2mm.exe 2mm_tile.exe
 	gcc 2mm.c -o 2mm.exe
 
 2mm_tile.exe: 2mm.c
-	gcc 2mm.c -o 2mm_tile.exe -DCONFIG_TILE -DN=25
+	gcc 2mm.c -o 2mm_tile.exe -DCONFIG_TILE -DN=5
 
 test:
 	./2mm.exe 1 50 50 50 50 2> test.out -g
