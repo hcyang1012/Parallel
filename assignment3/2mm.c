@@ -22,17 +22,40 @@ static void init_tile(double *matrix, int block_row_size, int block_col_size)
 }
 
 //C = scalar * A * B
-inline void calculate_first_phase_block(double *A, double *B, double *C, double scalar, int rowsize_A, int colsize_A, int colsize_B)
+//A : rowsize_A X colsize_A matrix
+//B : colsize_A X colsize_B matrix
+//C : rowsize_A X colsize_B matrix 
+inline void calculate_first_phase_block(double *C, const double *A, const double *B, const double scalar, const int rowsize_A, const int colsize_A, const int colsize_B)
 {
   int i,j,k;
   for(i = 0 ; i < rowsize_A ; i++)
   {
-    for(j = 0 ; j < colsize_A ; j++)
+    for(j = 0 ; j < colsize_B ; j++)
     {
       for(k = 0 ; k < colsize_A ; k++)
       {
-        *(C + i * rowsize_A + j) = *(A + i * rowsize_A + k) + *(B + colsize_A * k + j) * scalar;
+        *(C + i * colsize_B + j) = *(A + i * colsize_A + k) + *(B + colsize_A * k + j) * scalar;
       }
+    }
+  }
+}
+
+inline void copy_block(double *dst, const double *src, const int row, const int col)
+{
+  memcpy(dst,src,sizeof(double)*row*col);
+}
+
+//Write src matrix to dst
+//src : scr_row X src_col matrix
+//dst : A matrix that has dst_col columns
+inline void write_back(double *dst, const double *src, const int dst_col, const int src_row, const int src_col)
+{
+  int i,j;
+  for(i = 0 ; i < src_row ; i++)
+  {
+    for(j = 0 ; j < src_col ; j++)
+    {
+      *(dst + i * dst_col + j) = *(src + i * src_col + j);
     }
   }
 }
@@ -104,8 +127,13 @@ void kernel_2mm(int ni, int nj, int nk, int nl,
   int block_nj = nj / N;
   int block_nk = nk / N;
   int block_nl = nl / N;
+  double *block_A = (double*)malloc(sizeof(double) * block_ni * block_nk);
+  double *block_B = (double*)malloc(sizeof(double) * block_nk * block_nj);
+  double *block_C = (double*)malloc(sizeof(double) * block_nl * block_nj);
+  double *block_D = (double*)malloc(sizeof(double) * block_ni * block_nl);
+  double *block_tmp = (double*)malloc(sizeof(double) * block_ni * block_nj);
+
 #endif
-ß
 #pragma scop
 
 #ifndef CONFIG_TILE
@@ -129,7 +157,7 @@ for(i = 0 ; i < N ; i++)
 {
   for(j = 0 ; j < N ; j++)
   {
-    init_tile(&tmp[i*block_ni][j*block_nj], block_ni, block_nj);
+    init_tile(block_tmp, block_ni, block_nj);
     for(k = 0 ; k < N ; k++)
     {
       //Multiply blocks
@@ -145,6 +173,10 @@ for(i = 0 ; i < N ; i++)
 12 12 12 12  24 24
 12 12 12 12  24 24
 */
+      copy_block(block_A, &A[i * block_ni][k * block_nk], block_ni, block_nk);
+      copy_block(block_B, &B[k * block_nk][j * block_nj], block_nk, block_nj);
+      calculate_first_phase_block(block_tmp, block_A, block_B, alpha, block_ni, block_nk, block_nj);
+      write_back(&tmp[i * block_ni][j * block_nj], block_tmp, nj, block_ni, block_nj);
     }
   }
 }
@@ -154,14 +186,14 @@ for(i = 0 ; i < N ; i++)
     tmp[i][j] = 0;
     for (k = 0; k < nk; ++k)
       tmp[i][j] += alpha * A[i][k] * B[k][j];
-  }
+  }*/
 for (i = 0; i < ni; i++)
   for (j = 0; j < nl; j++)
   {
     D[i][j] *= beta;
     for (k = 0; k < nj; ++k)
       D[i][j] += tmp[i][k] * C[k][j];
-  }*/
+  }
 #endif
 #pragma endscop
 

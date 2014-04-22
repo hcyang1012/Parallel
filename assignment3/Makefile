@@ -4,11 +4,11 @@ all: 2mm.exe 2mm_tile.exe
 	gcc 2mm.c -o 2mm.exe
 
 2mm_tile.exe: 2mm.c
-	gcc 2mm.c -o 2mm_tile.exe -DCONFIG_TILE
+	gcc 2mm.c -o 2mm_tile.exe -DCONFIG_TILE -g
 
 test:
-	./2mm.exe 1 10 10 10 10 2> test.out
-	./2mm_tile.exe 1 10 10 10 2> test2.out
+	./2mm.exe 1 10 10 10 10 2> test.out -g
+	./2mm_tile.exe 1 10 10 10 10 2> test2.out
 	diff test.out test2.out
 
 perf:
